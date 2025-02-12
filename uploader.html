@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>File Upload to S3</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background: #f4f4f4;
+                text-align: center;
+                padding: 50px;
+            }
+            .container {
+                background: white;
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+                max-width: 400px;
+                margin: auto;
+            }
+            input[type="file"] {
+                margin: 10px 0;
+            }
+            button {
+                background: #007BFF;
+                color: white;
+                border: none;
+                padding: 10px 20px;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+            button:hover {
+                background: #0056b3;
+            }
+            .response {
+                margin-top: 20px;
+                font-size: 14px;
+            }
+        </style>
+    </head>
+<body>
+    <div class="upload-container">
+        <h2>Upload PDF to AWS</h2>
+        <input type="file" id="fileInput" accept="application/pdf"><br>
+        <button id="uploadButton">Upload</button>
+        <p id="status"></p>
+    </div>
+
+    <script>
+        document.getElementById('uploadButton').addEventListener('click', () => {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            const status = document.getElementById('status');
+
+            if (!file) {
+                status.innerText = "❌ Please select a PDF file to upload.";
+                return;
+            }
+
+            // Clear status before upload
+            status.innerText = "Uploading...";
+
+            // Read file as Base64
+            const reader = new FileReader();
+            reader.onload = () => {
+                const base64File = reader.result.split(',')[1]; // Get Base64 content
+
+                // Debug log for request payload
+                console.log("Payload:", {
+                    file_name: file.name,
+                    content_type: file.type,
+                    body: base64File
+                });
+
+                // Make the fetch request to the API Gateway
+                fetch('https://your-api-gateway-endpoint', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        file_name: file.name,
+                        content_type: file.type,
+                        body: base64File
+                    })
+                })
+                .then(async (response) => {
+                    console.log("HTTP Response:", response); // Debug HTTP response
+
+                    // Check if the response is okay
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+
+                    // Parse the JSON body from the response
+                    const rawData = await response.json();
+                    console.log("Raw Response Data:", rawData); // Log raw response data
+
+                    // Check if the body is a stringified JSON and parse it
+                    const data = typeof rawData.body === 'string' ? JSON.parse(rawData.body) : rawData;
+                    console.log("Parsed Response Data:", data); // Log parsed response data
+
+                    // Display success message
+                    if (data.message && data.file_url) {
+                        status.innerHTML = `✅ Success: ${data.message} `;
+                    } else {
+                        throw new Error("Unexpected response structure.");
+                    }
+                })
+                .catch((error) => {
+                    console.error("Fetch Error:", error); // Log fetch errors
+                    status.innerText = `❌ An error occurred: ${error.message}`;
+                });
+            };
+
+            // Handle file reading errors
+            reader.onerror = () => {
+                status.innerText = "❌ Failed to read the file. Please try again.";
+            };
+
+            reader.readAsDataURL(file); // Read the file
+        });
+    </script>
+</body>
+</html>
