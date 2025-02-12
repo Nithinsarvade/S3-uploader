@@ -64,6 +64,4 @@ This project is a simple web-based application that allows users to upload PDF f
 - Check the browser console for frontend errors.
 - Review AWS CloudWatch logs for Lambda function execution details.
 
-## License
-This project is open-source and available under the MIT License.
 
